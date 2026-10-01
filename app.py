@@ -48,6 +48,29 @@ def index():
         "index.html", message=message, status_class=status_class
     )
 
+@app.route("/buku")
+def buku():
+    """Menampilkan daftar buku CyberTales."""
+    return """
+    <h1>CyberTales</h1>
+    <h2>Daftar Buku</h2>
+    <ul>
+        <li>Cybersecurity untuk Pemula</li>
+        <li>Mengenal Phishing dan Scam</li>
+        <li>Dasar Keamanan Digital</li>
+    </ul>
+    """
+
+
+@app.route("/tentang")
+def tentang():
+    """Menampilkan informasi tentang CyberTales."""
+    return """
+    <h1>Tentang CyberTales</h1>
+    <p>CyberTales adalah media belajar cybersecurity
+    untuk pemula dengan konsep cerita yang menarik.</p>
+    """
+
 if __name__ == "__main__":
     init_db()
     app.run(host="0.0.0.0", port=5000)  # nosemgrep
