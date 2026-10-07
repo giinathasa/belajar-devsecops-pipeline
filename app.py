@@ -18,6 +18,7 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     """Menampilkan formulir login dan memproses autentikasi."""
@@ -47,29 +48,6 @@ def index():
     return render_template(
         "index.html", message=message, status_class=status_class
     )
-
-@app.route("/buku")
-def buku():
-    """Menampilkan daftar buku CyberTales."""
-    return """
-    <h1>CyberTales</h1>
-    <h2>Daftar Buku</h2>
-    <ul>
-        <li>Cybersecurity untuk Pemula</li>
-        <li>Mengenal Phishing dan Scam</li>
-        <li>Dasar Keamanan Digital</li>
-    </ul>
-    """
-
-
-@app.route("/tentang")
-def tentang():
-    """Menampilkan informasi tentang CyberTales."""
-    return """
-    <h1>Tentang CyberTales</h1>
-    <p>CyberTales adalah media belajar cybersecurity
-    untuk pemula dengan konsep cerita yang menarik.</p>
-    """
 
 if __name__ == "__main__":
     init_db()
