@@ -1,0 +1,11 @@
+title = "Gitleaks Config"
+
+[extend]
+useDefault = true
+
+# Whitelist file yang tidak perlu di-scan
+[allowlist]
+paths = [
+  '''tests/.*''',
+  '''.*\.md''', # skip (README) menghindari false positive
+]
