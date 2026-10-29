@@ -48,22 +48,38 @@ jobs:
             - name: Run Pylint Check
               run: pylint --fail-under=9.0 app.py
 
+
     # ==========================================
-    # CD STAGE: Deploy ke VM
+    # CD STAGE: Build, Scan & Deploy ke VM
     # ==========================================
     deploy-to-vm:
-        name: Build & Deploy to VirtualBox VM
+        name: Build, Scan & Deploy to VirtualBox VM
         needs: [sast-scan, pylint-check]
         runs-on: self-hosted
         steps:
             - name: Checkout Source Code
               uses: actions/checkout@v4
 
-            - name: Build and Run Container
+            # 1. Build Docker Image
+            - name: Build Docker Image
+              run: docker build -t secure-flask-app:latest .
+
+            # 2. Scan Docker Image dengan Trivy
+            - name: Scan Docker Image with Trivy
               run: |
-                  docker build -t secure-flask-app:latest .
+                  docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+                    aquasec/trivy:latest image \
+                    --scanners vuln \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 1 \
+                    secure-flask-app:latest
+
+            # 3. Deploy jika scan berhasil
+            - name: Deploy Container
+              run: |
                   docker stop web-flask || true
                   docker rm web-flask || true
                   docker run -d -p 5000:5000 --name web-flask secure-flask-app:latest
                   docker ps | grep web-flask
-
