@@ -1,0 +1,28 @@
+name: Dockerfile Lint (Hadolint)
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  dockerfile-lint:
+    name: Hadolint Dockerfile Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # DL3005 (apt-get upgrade) dan DL3013 (pip tanpa versi) diabaikan karena
+      # Dockerfile sengaja memperbarui paket untuk menambal vulnerability.
+      - name: Run Hadolint
+        run: |
+          docker run --rm -i hadolint/hadolint:v2.12.0 \
+            hadolint --failure-threshold warning \
+            --ignore DL3005 --ignore DL3013 - < Dockerfile
