@@ -63,10 +63,29 @@ jobs:
       - name: Run pip-audit
         run: pip-audit -r requirements.txt
 
+  sbom-generation:
+    name: Syft SBOM Generation
+    runs-on: ubuntu-latest
+    needs: [sast-scan, pylint-check, dependency-scan]
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image for SBOM
+        run: docker build -t secure-flask-app:latest .
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          image: secure-flask-app:latest
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+          artifact-name: secure-flask-app-sbom
+          upload-artifact: true
 
   deploy-to-vm:
     name: Build, Scan & Deploy to VirtualBox VM
-    needs: [sast-scan, pylint-check, dependency-scan]
+    needs: [sast-scan, pylint-check, dependency-scan, sbom-generation]
     runs-on: self-hosted
     steps:
       - name: Checkout Source Code
