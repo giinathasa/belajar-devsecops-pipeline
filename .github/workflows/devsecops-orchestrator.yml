@@ -58,16 +58,47 @@ jobs:
   # ==========================================
   security-gate:
     name: Security Gate
+
+    runs-on: ubuntu-latest
+
     needs:
       - gitleaks
       - devsecops-ci
       - dockerfile-lint
       - zap-dast
-    runs-on: ubuntu-latest
+
+    # Tetap jalankan gate untuk mengevaluasi hasil semua job.
+    if: always()
 
     steps:
-      - name: All Security Checks Passed
-        run: echo "All security checks passed successfully!"
+      - name: Verify All Security Checks
+        shell: bash
+        run: |
+          echo "Checking all security pipeline results..."
+
+          if [[ "${{ needs.gitleaks.result }}" != "success" ]]; then
+            echo "Gitleaks failed!"
+            exit 1
+          fi
+
+          if [[ "${{ needs.devsecops-ci.result }}" != "success" ]]; then
+            echo "DevSecOps CI failed!"
+            exit 1
+          fi
+
+          if [[ "${{ needs.dockerfile-lint.result }}" != "success" ]]; then
+            echo "Hadolint failed!"
+            exit 1
+          fi
+
+          if [[ "${{ needs.zap-dast.result }}" != "success" ]]; then
+            echo "OWASP ZAP failed!"
+            exit 1
+          fi
+
+          echo "=================================="
+          echo "ALL SECURITY CHECKS PASSED"
+          echo "=================================="
 
   # ==========================================
   # STAGE 6: DEPLOYMENT TO VM
@@ -75,12 +106,17 @@ jobs:
   deploy:
     name: Deploy Application to VMware Server
 
-    # Deployment hanya berjalan setelah push ke main.
-    # Tidak melakukan deployment saat Pull Request.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
     needs:
       - security-gate
+
+    # Deployment hanya untuk push ke main.
+    # Tidak melakukan deployment ketika Pull Request.
+    if: >-
+      ${{
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        needs.security-gate.result == 'success'
+      }}
 
     runs-on: self-hosted
 
@@ -91,14 +127,22 @@ jobs:
       - name: Build Docker Image
         run: docker build -t secure-flask-app:latest .
 
-      - name: Deploy Container
-        run: |
-          docker stop web-flask || true
-          docker rm web-flask || true
+      - name: Stop Previous Container
+        run: docker stop web-flask || true
 
+      - name: Remove Previous Container
+        run: docker rm web-flask || true
+
+      - name: Deploy New Container
+        run: |
           docker run -d \
             -p 5000:5000 \
             --name web-flask \
+            --restart unless-stopped \
             secure-flask-app:latest
 
+      - name: Verify Deployment
+        run: |
+          sleep 5
           docker ps | grep web-flask
+          curl -f http://127.0.0.1:5000/
