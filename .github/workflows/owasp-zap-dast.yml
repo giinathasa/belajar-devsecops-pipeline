@@ -54,12 +54,14 @@ jobs:
           docker logs flask-dast-app
           exit 1
 
-      # 5. Prepare report directory
+      # 5. Prepare ZAP report directory
       - name: Prepare ZAP Reports
-        run: mkdir -p reports
+        run: |
+          mkdir -p reports
+          chmod 777 reports
 
       # 6. Run OWASP ZAP Baseline Scan
-      - name: OWASP ZAP Baseline Scan
+      - name: OWASP ZAP Baseline Security Scan
         run: |
           docker run --rm -t \
             --network host \
@@ -81,7 +83,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      # 8. Cleanup
+      # 8. Cleanup Docker Container
       - name: Cleanup Docker Container
         if: always()
         run: |
