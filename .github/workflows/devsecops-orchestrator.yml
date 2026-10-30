@@ -54,18 +54,33 @@ jobs:
     uses: ./.github/workflows/owasp-zap-dast.yml
 
   # ==========================================
-  # STAGE 5: DEPLOYMENT TO VM
+  # STAGE 5: FINAL SECURITY GATE
   # ==========================================
-  deploy:
-    name: Deploy Application to VMware Server
-
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
+  security-gate:
+    name: Security Gate
     needs:
       - gitleaks
       - devsecops-ci
       - dockerfile-lint
       - zap-dast
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: All Security Checks Passed
+        run: echo "All security checks passed successfully!"
+
+  # ==========================================
+  # STAGE 6: DEPLOYMENT TO VM
+  # ==========================================
+  deploy:
+    name: Deploy Application to VMware Server
+
+    # Deployment hanya berjalan setelah push ke main.
+    # Tidak melakukan deployment saat Pull Request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    needs:
+      - security-gate
 
     runs-on: self-hosted
 
