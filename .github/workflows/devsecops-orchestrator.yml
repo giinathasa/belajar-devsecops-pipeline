@@ -1,0 +1,89 @@
+
+name: DevSecOps Main Pipeline Orchestrator
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ==========================================
+  # STAGE 1: SECRET SCANNING
+  # ==========================================
+  gitleaks:
+    name: Gitleaks Secret Scanning
+    uses: ./.github/workflows/secret-scanning.yml
+    secrets: inherit
+
+  # ==========================================
+  # STAGE 2: SAST, CODE QUALITY, DEPENDENCY
+  # AND SBOM GENERATION
+  # ==========================================
+  devsecops-ci:
+    name: DevSecOps CI Security Checks
+    needs: gitleaks
+    uses: ./.github/workflows/devsecops.yml
+    with:
+      orchestrated: true
+      deploy_enabled: false
+
+  # ==========================================
+  # STAGE 3: DOCKERFILE LINT
+  # ==========================================
+  dockerfile-lint:
+    name: Hadolint Dockerfile Security Check
+    needs: devsecops-ci
+    uses: ./.github/workflows/dockerfile-lint.yml
+
+  # ==========================================
+  # STAGE 4: DYNAMIC APPLICATION SECURITY TESTING
+  # ==========================================
+  zap-dast:
+    name: OWASP ZAP Dynamic Security Testing
+    needs: dockerfile-lint
+    uses: ./.github/workflows/owasp-zap-dast.yml
+
+  # ==========================================
+  # STAGE 5: DEPLOYMENT TO VM
+  # ==========================================
+  deploy:
+    name: Deploy Application to VMware Server
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    needs:
+      - gitleaks
+      - devsecops-ci
+      - dockerfile-lint
+      - zap-dast
+
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t secure-flask-app:latest .
+
+      - name: Deploy Container
+        run: |
+          docker stop web-flask || true
+          docker rm web-flask || true
+
+          docker run -d \
+            -p 5000:5000 \
+            --name web-flask \
+            secure-flask-app:latest
+
+          docker ps | grep web-flask
