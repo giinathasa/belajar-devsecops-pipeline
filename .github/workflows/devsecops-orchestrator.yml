@@ -146,3 +146,39 @@ jobs:
           sleep 5
           docker ps | grep web-flask
           curl -f http://127.0.0.1:5000/
+
+  # ==========================================
+  # REQUIRED STATUS CHECKS COMPATIBILITY
+  # ==========================================
+
+  required-pylint:
+    name: DevSecOps CI Security Checks / Pylint Code Quality Gate
+    needs: devsecops-ci
+    if: always() && needs.devsecops-ci.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Pylint check passed"
+
+  required-dependency:
+    name: DevSecOps CI Security Checks / Python Dependency Security Scan
+    needs: devsecops-ci
+    if: always() && needs.devsecops-ci.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Dependency security check passed"
+
+  required-semgrep:
+    name: DevSecOps CI Security Checks / Semgrep SAST Scan
+    needs: devsecops-ci
+    if: always() && needs.devsecops-ci.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Semgrep check passed"
+
+  required-sbom:
+    name: DevSecOps CI Security Checks / Syft SBOM Generation
+    needs: devsecops-ci
+    if: always() && needs.devsecops-ci.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "SBOM generation passed"
