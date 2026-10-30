@@ -1,7 +1,10 @@
-
 name: OWASP ZAP DAST Security Pipeline
 
 on:
+  workflow_call:
+
+  workflow_dispatch:
+
   push:
     branches:
       - fitur-owasp-zap-dast
@@ -9,8 +12,6 @@ on:
   pull_request:
     branches:
       - main
-
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -89,4 +90,3 @@ jobs:
         if: always()
         run: |
           docker rm -f flask-dast-app || true
-          

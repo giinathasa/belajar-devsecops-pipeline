@@ -2,13 +2,26 @@
 name: DevSecOps CI/CD Pipeline
 
 on:
-  push:
-    branches: ["main", "master", "pipeline-tambahan"]
-  pull_request:
-    branches: ["main", "master"]
+  workflow_call:
+    inputs:
+      orchestrated:
+        description: "Workflow is called by the main orchestrator"
+        required: false
+        type: boolean
+        default: false
+
+      deploy_enabled:
+        description: "Enable deployment from this workflow"
+        required: false
+        type: boolean
+        default: true
+
   workflow_dispatch:
 
 jobs:
+  # ==========================================
+  # JOB 1: SAST SCAN (SEMGREP)
+  # ==========================================
   sast-scan:
     name: Semgrep SAST Scan
     runs-on: ubuntu-latest
@@ -21,6 +34,9 @@ jobs:
       - name: Run Semgrep SAST
         run: semgrep scan --config auto --error --verbose --exclude=".github"
 
+  # ==========================================
+  # JOB 2: CODE QUALITY (PYLINT)
+  # ==========================================
   pylint-check:
     name: Pylint Code Quality Gate
     runs-on: ubuntu-latest
@@ -42,7 +58,9 @@ jobs:
       - name: Run Pylint Check
         run: pylint --fail-under=9.0 app.py
 
-  
+  # ==========================================
+  # JOB 3: DEPENDENCY SECURITY SCAN
+  # ==========================================
   dependency-scan:
     name: Python Dependency Security Scan
     runs-on: ubuntu-latest
@@ -63,6 +81,9 @@ jobs:
       - name: Run pip-audit
         run: pip-audit -r requirements.txt
 
+  # ==========================================
+  # JOB 4: SBOM GENERATION (SYFT)
+  # ==========================================
   sbom-generation:
     name: Syft SBOM Generation
     runs-on: ubuntu-latest
@@ -83,10 +104,24 @@ jobs:
           artifact-name: secure-flask-app-sbom
           upload-artifact: true
 
+  # ==========================================
+  # JOB 5: DEPLOYMENT TO VM
+  # ==========================================
   deploy-to-vm:
     name: Build, Scan & Deploy to VirtualBox VM
-    needs: [sast-scan, pylint-check, dependency-scan, sbom-generation]
+
+    # Skip deployment when called by orchestrator
+    # with deploy_enabled set to false.
+    if: ${{ !inputs.orchestrated || inputs.deploy_enabled }}
+
+    needs:
+      - sast-scan
+      - pylint-check
+      - dependency-scan
+      - sbom-generation
+
     runs-on: self-hosted
+
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
