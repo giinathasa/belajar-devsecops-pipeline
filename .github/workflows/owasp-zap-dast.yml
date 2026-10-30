@@ -71,7 +71,8 @@ jobs:
             -t http://127.0.0.1:5000 \
             -r zap-report.html \
             -J zap-report.json \
-            -m 1
+            -m 1 \
+            -I
 
       # 7. Upload scan reports
       - name: Upload OWASP ZAP Reports
@@ -88,3 +89,4 @@ jobs:
         if: always()
         run: |
           docker rm -f flask-dast-app || true
+          
