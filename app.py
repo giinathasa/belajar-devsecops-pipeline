@@ -1,54 +1,31 @@
-"""Modul backend autentikasi Flask dengan antarmuka web interaktif."""
+"""Aplikasi Flask sederhana untuk pengujian pipeline."""
+import os
 
-import sqlite3
-from flask import Flask, render_template, request
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-def init_db():
-    """Inisialisasi basis data dan membuat data pengguna awal."""
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        "CREATE TABLE IF NOT EXISTS users (username TEXT, password TEXT)"
-    )
-    cursor.execute(
-        "INSERT OR IGNORE INTO users VALUES ('admin', 'supersecret')"
-    )
-    conn.commit()
-    conn.close()
 
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    """Menampilkan formulir login dan memproses autentikasi."""
-    message = None
-    status_class = None
+    """Endpoint utama."""
+    return jsonify(message="Hello DevSecOps", status="ok")
 
-    if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
 
-        conn = sqlite3.connect("users.db")
-        cursor = conn.cursor()
+@app.route("/health")
+def health():
+    """Endpoint health check."""
+    return jsonify(status="healthy")
 
-        # Parameterized query untuk mencegah SQL Injection
-        query = "SELECT * FROM users WHERE username = ? AND password = ?"
-        cursor.execute(query, (username, password))
-        user = cursor.fetchone()
-        conn.close()
 
-        if user:
-            message = "Login Berhasil! Selamat datang."
-            status_class = "success"
-        else:
-            message = "Login Gagal! Kredensial tidak valid."
-            status_class = "danger"
+@app.after_request
+def add_security_headers(response):
+    """Tambahkan header keamanan dasar."""
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
 
-    return render_template(
-        "index.html", message=message, status_class=status_class
-    )
 
 if __name__ == "__main__":
-    init_db()
-    app.run(host="0.0.0.0", port=5000)  # nosemgrep
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5000")))
