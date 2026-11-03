@@ -1,54 +1,39 @@
-"""Modul backend autentikasi Flask dengan antarmuka web interaktif."""
-
-import sqlite3
-from flask import Flask, render_template, request
-
+import os, sys
+import json
+import hashlib
+import subprocess
+from flask import Flask, request
 app = Flask(__name__)
 
-def init_db():
-    """Inisialisasi basis data dan membuat data pengguna awal."""
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        "CREATE TABLE IF NOT EXISTS users (username TEXT, password TEXT)"
-    )
-    cursor.execute(
-        "INSERT OR IGNORE INTO users VALUES ('admin', 'supersecret')"
-    )
-    conn.commit()
-    conn.close()
+# Gitleaks: secret palsu (BUKAN token asli)
+DB_PASSWORD = "Sup3rS3cretP@ssw0rd!2026"
+api_key = "9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a"
+SECRET_KEY = "kR7mQ2xV9nB4tL8wZ3pH6yD1cF5jA0sE"
 
+unused_var = 10
+def Bad_Function( a,b ):
+    x=1
+    if a==b :
+        return True
+    else:
+        return False
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    """Menampilkan formulir login dan memproses autentikasi."""
-    message = None
-    status_class = None
+    return "Hello"
 
-    if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
+@app.route("/run")
+def run():
+    cmd = request.args.get("cmd")
+    return subprocess.check_output(cmd, shell=True)
 
-        conn = sqlite3.connect("users.db")
-        cursor = conn.cursor()
+@app.route("/calc")
+def calc():
+    return str(eval(request.args.get("expr")))
 
-        # Parameterized query untuk mencegah SQL Injection
-        query = "SELECT * FROM users WHERE username = ? AND password = ?"
-        cursor.execute(query, (username, password))
-        user = cursor.fetchone()
-        conn.close()
-
-        if user:
-            message = "Login Berhasil! Selamat datang."
-            status_class = "success"
-        else:
-            message = "Login Gagal! Kredensial tidak valid."
-            status_class = "danger"
-
-    return render_template(
-        "index.html", message=message, status_class=status_class
-    )
+@app.route("/hash")
+def hash_pw():
+    return hashlib.md5(request.args.get("p").encode()).hexdigest()
 
 if __name__ == "__main__":
-    init_db()
-    app.run(host="0.0.0.0", port=5000)  # nosemgrep
+    app.run(host="0.0.0.0", port=5000, debug=True)
